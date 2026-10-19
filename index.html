@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Likes &amp; Dislikes Slides</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one full-screen stage for live teaching; sentence slots are clickable, a bottom bar drives the cue → answer chain. */
+:root{
+  --bg:#FCEAF1; --stage:#FFF8FB; --ink:#3A1528; --muted:#8A5E72; --line:#F2C9DA;
+  --accent:#D63A78; --accent-ink:#FFFFFF; --soft:#FBD6E5; --mark:#FFB8D2; --mark-ink:#4A0F28;
+  --display:"Bricolage Grotesque","Avenir Next","Segoe UI",sans-serif;
+  --body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1F0F18; --stage:#2B1621; --ink:#F8E4EE; --muted:#C79AB0; --line:#4D2A3C;
+  --accent:#FF7EAD; --accent-ink:#2A0A18; --soft:#4B1E34; --mark:#C2457A; --mark-ink:#FFFFFF; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1F0F18; --stage:#2B1621; --ink:#F8E4EE; --muted:#C79AB0; --line:#4D2A3C;
+  --accent:#FF7EAD; --accent-ink:#2A0A18; --soft:#4B1E34; --mark:#C2457A; --mark-ink:#FFFFFF; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;
+  display:flex;flex-direction:column;gap:12px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.title{font-family:var(--display);font-weight:800;font-size:clamp(1rem,2.2vw,1.35rem)}
+.title span{color:var(--accent)}
+.modes{display:flex;gap:6px}
+button{font:inherit;cursor:pointer;border-radius:999px;border:1.5px solid var(--line);background:var(--stage);color:var(--ink);padding:8px 16px;font-weight:700}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+button.on,button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.stage{flex:1;min-height:0;background:var(--stage);border:1px solid var(--line);border-radius:24px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(18px,4vh,40px);padding:clamp(16px,4vw,48px);text-align:center;position:relative}
+.cue{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;min-height:3.2rem}
+.tag{font-size:clamp(.8rem,1.6vw,1rem);letter-spacing:.14em;text-transform:uppercase;font-weight:700;background:var(--mark);color:var(--mark-ink);padding:6px 12px;border-radius:8px}
+.cueword{font-family:var(--display);font-weight:800;font-size:clamp(1.8rem,5vw,3.4rem);color:var(--accent)}
+.sentence{font-family:var(--display);font-weight:700;font-size:clamp(2rem,6.5vw,5.2rem);line-height:1.15;text-wrap:balance;max-width:18ch}
+.slot{cursor:pointer;border-radius:14px;padding:0 .12em;transition:background .15s}
+.slot:hover{background:var(--soft)}
+.slot.changed{animation:pop .5s ease}
+.blank{display:inline-block;min-width:3.5ch;border-bottom:.08em solid var(--accent);color:transparent}
+.ing{background:linear-gradient(transparent 58%,var(--mark) 58%)}
+@keyframes pop{0%{background:var(--mark)}100%{background:transparent}}
+.hint{color:var(--muted);font-size:clamp(.85rem,1.5vw,1rem)}
+.count{position:absolute;top:14px;right:18px;color:var(--muted);font-variant-numeric:tabular-nums;font-weight:700}
+.bar{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.bar button{font-size:1.05rem;padding:10px 22px}
+.pickers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.pk{background:var(--stage);border:1px solid var(--line);border-radius:16px;padding:10px;min-width:0}
+.pk h3{margin:0 0 6px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.pk div{display:flex;flex-wrap:wrap;gap:5px}
+.pk button{padding:4px 10px;font-size:.88rem;font-weight:400}
+.pk button.on{font-weight:700}
+@media (max-width:700px){.pickers{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.slot.changed{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="title">love · like · enjoy · don’t mind · hate + <span>-ing</span> ♡</div>
+  <div class="modes">
+    <button id="mChain" class="on">Chain drill</button>
+    <button id="mFree">Free drill</button>
+    <button id="fs">Full screen</button>
+  </div>
+</div>
+
+<main class="stage" id="stage">
+  <span class="count" id="count"></span>
+  <div class="cue" id="cue"></div>
+  <div class="sentence" id="sentence"></div>
+  <div class="hint" id="hint"></div>
+</main>
+
+<div class="bar" id="bar">
+  <button id="prev">◀ Back</button>
+  <button id="next" class="primary">Next ▶</button>
+</div>
+
+<div class="pickers" id="pickers" hidden>
+  <div class="pk"><h3>Subject</h3><div id="pkS"></div></div>
+  <div class="pk"><h3>Verb</h3><div id="pkV"></div></div>
+  <div class="pk"><h3>Activity</h3><div id="pkA"></div></div>
+</div>
+
+<script>
+/* ============================================================
+   CONTEÚDO EDITÁVEL — mude aqui as listas e a sequência.
+   ============================================================ */
+
+// Sujeitos de 3ª pessoa (recebem "loves", "doesn't mind"...). Em minúsculas.
+const THIRD=["he","she","it","my husband","my sister","my best friend","my boss","my mom"];
+
+// Verbos: l = nome no botão, f = [forma normal, forma 3ª pessoa], end = texto no fim da frase (opcional)
+const VERBS={
+  love:{l:"love",f:["love","loves"]}, like:{l:"like",f:["like","likes"]}, enjoy:{l:"enjoy",f:["enjoy","enjoys"]},
+  notmind:{l:"not mind",f:["don’t mind","doesn’t mind"]}, notlike:{l:"not like",f:["don’t like","doesn’t like"]},
+  hate:{l:"hate",f:["hate","hates"]},
+  rlove:{l:"really love",f:["really love","really loves"]}, rlike:{l:"really like",f:["really like","really likes"]},
+  rhate:{l:"really hate",f:["really hate","really hates"]}, enjoyvm:{l:"enjoy … very much",f:["enjoy","enjoys"],end:" very much"}};
+
+// Sujeitos que aparecem nos botões do Free drill
+const SUBJ=["I","You","We","They","She","He","My husband","My sister","My best friend","My boss","My friends"];
+
+// Atividades: [forma base, forma -ing]
+const ACTS=[["shop","shopping"],["drink coffee","drinking coffee"],["drink wine","drinking wine"],["paint","painting"],
+  ["paint with watercolors","painting with watercolors"],["relax at the spa","relaxing at the spa"],["travel","travelling"],
+  ["sleep late","sleeping late"],["work","working"],["buy shoes","buying shoes"],["solve problems","solving problems"],
+  ["design projects","designing projects"],["get manicures","getting manicures"],["write reports","writing reports"],
+  ["cook for my husband","cooking for my husband"]];
+
+// Frase modelo inicial
+const START={s:"I",v:"love",a:"shopping"};
+
+// Sequência do Chain drill: [tipo, palavra mostrada, mudança]
+// tipo = "subject" | "verb" | "activity"; s = sujeito, v = chave do verbo (de VERBS), a = atividade -ing (de ACTS)
+const CHAIN=[
+ ["subject","She",{s:"She"}],["verb","hate",{v:"hate"}],["activity","drink coffee",{a:"drinking coffee"}],
+ ["subject","We",{s:"We"}],["verb","not mind",{v:"notmind"}],["activity","work",{a:"working"}],
+ ["subject","My sister",{s:"My sister"}],["verb","really love",{v:"rlove"}],["activity","travel",{a:"travelling"}],
+ ["verb","not like",{v:"notlike"}],["subject","They",{s:"They"}],["activity","drink wine",{a:"drinking wine"}],
+ ["verb","enjoy … very much",{v:"enjoyvm"}],["subject","My husband",{s:"My husband"}],["activity","cook for my husband",{a:"cooking for my husband"}],
+ ["subject","My boss",{s:"My boss"}],["verb","not mind",{v:"notmind"}],["activity","write reports",{a:"writing reports"}],
+ ["verb","hate",{v:"hate"}],["subject","I",{s:"I"}],["activity","solve problems",{a:"solving problems"}],
+ ["verb","like",{v:"like"}],["activity","buy shoes",{a:"buying shoes"}],["subject","My best friend",{s:"My best friend"}],
+ ["activity","relax at the spa",{a:"relaxing at the spa"}],["verb","really like",{v:"rlike"}],["subject","I",{s:"I"}],
+ ["activity","paint",{a:"painting"}],["verb","really love",{v:"rlove"}]];
+
+/* ============================================================
+   DAQUI PRA BAIXO É O FUNCIONAMENTO — não precisa mexer.
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const third=s=>THIRD.includes(s.toLowerCase());
+const actBase=g=>(ACTS.find(a=>a[1]===g)||[g])[0];
+const SLOTKEY={subject:"s",verb:"v",activity:"a"};
+
+// chain states: index 0 = start; step i shows cue (phase 0) then answer (phase 1)
+const states=[{...START}]; CHAIN.forEach((c,i)=>states.push({...states[i],...c[2]}));
+let mode="chain", step=0, phase=1, free={...START}, changed=null;
+
+function ingWrap(a){ const w=a.split(" "); w[0]=w[0].replace(/ing$/,'<span class="ing">ing</span>'); return w.join(" "); }
+function render(st,blankSlot){
+  const V=VERBS[st.v], verb=V.f[third(st.s)?1:0];
+  const part=(k,html)=>blankSlot===k?`<span class="blank">${"_".repeat(6)}</span>`:`<span class="slot${changed===k?" changed":""}" data-k="${k}">${html}</span>`;
+  $("sentence").innerHTML=`${part("s",st.s)} ${part("v",verb)} ${part("a",ingWrap(st.a))}${V.end||""}.`;
+}
+function draw(){
+  if(mode==="chain"){
+    $("count").textContent=`${step} / ${CHAIN.length}`;
+    if(step===0){ $("cue").innerHTML=`<span class="tag">model</span>`; render(states[0]); $("hint").textContent="Repeat. Then press Next for the first cue."; }
+    else{
+      const [t,w]=CHAIN[step-1];
+      $("cue").innerHTML=`<span class="tag">${t}</span><span class="cueword">${w}</span>`;
+      if(phase===0){ render(states[step-1]); $("sentence").querySelector(`[data-k="${SLOTKEY[t]}"]`)?.classList.add("changed"); $("hint").textContent="Say the new sentence. Next = show the answer."; }
+      else { changed=SLOTKEY[t]; render(states[step]); changed=null; $("hint").textContent=step===CHAIN.length?"End of the chain! Click any part of the sentence to keep drilling.":"Repeat together. Next = new cue."; }
+    }
+  } else {
+    $("count").textContent=""; $("cue").innerHTML=`<span class="tag">free drill</span>`;
+    render(free); changed=null;
+    $("hint").textContent="Click the subject, verb or activity to change it — or use the buttons below.";
+    drawPickers();
+  }
+}
+function next(){ if(mode!=="chain")return; if(step===0){step=1;phase=0;} else if(phase===0)phase=1; else if(step<CHAIN.length){step++;phase=0;} draw(); }
+function prev(){ if(mode!=="chain")return; if(step===0)return; if(phase===1){phase=0;} else {step--;phase=1;} draw(); }
+
+// clicking a slot cycles it (both modes; in chain it moves to free drill from current sentence)
+const LISTS={s:SUBJ,v:Object.keys(VERBS),a:ACTS.map(a=>a[1])};
+$("sentence").addEventListener("click",e=>{
+  const sl=e.target.closest(".slot"); if(!sl)return;
+  const k=sl.dataset.k;
+  if(mode==="chain"){ free={...states[phase===1?step:Math.max(0,step-1)]}; setMode("free"); }
+  const L=LISTS[k]; free[k]=L[(L.indexOf(free[k])+1)%L.length]; changed=k; draw();
+});
+function drawPickers(){
+  const mk=(id,list,key,label)=>{$(id).innerHTML=list.map(x=>`<button data-k="${key}" data-v="${x}" class="${free[key]===x?"on":""}">${label(x)}</button>`).join("");};
+  mk("pkS",SUBJ,"s",x=>x); mk("pkV",Object.keys(VERBS),"v",x=>VERBS[x].l); mk("pkA",ACTS.map(a=>a[1]),"a",x=>actBase(x));
+}
+$("pickers").addEventListener("click",e=>{const b=e.target.closest("button[data-k]"); if(!b)return; free[b.dataset.k]=b.dataset.v; changed=b.dataset.k; draw();});
+
+function setMode(m){ mode=m; $("mChain").classList.toggle("on",m==="chain"); $("mFree").classList.toggle("on",m==="free");
+  $("bar").hidden=m!=="chain"; $("pickers").hidden=m!=="free"; draw(); }
+$("mChain").onclick=()=>setMode("chain"); $("mFree").onclick=()=>setMode("free");
+$("next").onclick=next; $("prev").onclick=prev;
+document.addEventListener("keydown",e=>{
+  if(["ArrowRight","PageDown"," ","Enter"].includes(e.key)&&mode==="chain"){e.preventDefault();next();}
+  if(["ArrowLeft","PageUp"].includes(e.key)&&mode==="chain"){e.preventDefault();prev();}
+});
+$("fs").onclick=()=>{ try{ document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{}); }catch(_){} };
+draw();
+</script>
+</body>
+</html>
